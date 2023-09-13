@@ -34,13 +34,17 @@ void Client::auto_input()
 {
     std::string str;
     auto current = util::now_ms();
-    uint32_t auto_send = 0;
-    while ( auto_test && auto_send < test_count ) {
+    while ( is_running && auto_test ) {
+
+        if ( g_sn >= test_count ) {
+            printf( "finished auto send times=%d\n", g_sn );
+            break;
+        }
+
         if ( util::now_ms() - current < 20 )
             continue;
-        str.clear();
+
         current = util::now_ms();
-        ++auto_send;
         util::rand_str( str );
         if ( !str.empty() ) {
             char buff[BUFFER_SIZE];
@@ -54,7 +58,7 @@ void Client::auto_input()
 
             memcpy( &buff[8], str.data(), str.size() );
             ikcp_send( kcp, buff, str.size() + 8 );
-            // ikcp_update( kcp, util::iclock() );
+            //  ikcp_update( kcp, util::iclock() );
         }
     }
 }
@@ -75,8 +79,7 @@ void Client::input()
 
             memcpy( &buff[8], writeBuffer.data(), writeBuffer.size() );
             ikcp_send( kcp, buff, writeBuffer.size() + 8 );
-            //  ikcp_update( kcp, util::iclock() );
-            // client->send( writeBuffer.data(), writeBuffer.size() );
+            // ikcp_update( kcp, util::iclock() );
         }
     }
 }
@@ -119,9 +122,9 @@ void Client::run()
         maxrtt = rtt > maxrtt ? rtt : maxrtt;
 
         if ( !auto_test )
-            printf( "[RECV] sn:%d rrt:%d  content: {%s}\n", sn + 1, rtt, (char *)&buff[8] );
+            printf( "[RECV] mode=%d sn:%d rrt:%d  content: {%s}\n", md, sn + 1, rtt, (char *)&buff[8] );
         else
-            printf( "[RECV] sn:%d rrt:%d\n", sn + 1, rtt );
+            printf( "[RECV] mode=%d sn:%d rrt:%d\n", md, sn + 1, rtt );
         if ( next >= test_count ) break;
     }
 
