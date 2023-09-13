@@ -31,10 +31,13 @@ public:
     const char * getLocalIp() const { return inet_ntoa( m_local_addr.sin_addr ); }
     uint16_t getLocalPort() const { return ntohs( m_local_addr.sin_port ); }
 
+    void setLostrate( int rate ) { lost_rate; }
+
 private:
     int m_fd;
     struct sockaddr_in m_local_addr;
     struct sockaddr_in m_remote_addr;
     char m_recvBuffer[RECV_BUF_SIZE];
     uint32_t m_recvSize;
+    int lost_rate; // lost package rate
 };

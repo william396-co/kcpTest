@@ -5,16 +5,14 @@
 #include <algorithm>
 #include <string>
 #include <cstdlib>
+#include "src/random_util.h"
 
 static int g_sn = 0;
 
 void rand_str( std::string & str, size_t max = 2000 )
 {
-    str.clear();
-    size_t sz = rand() % max;
-    for ( size_t i = 0; i != sz; ++i ) {
-        str.push_back( rand() % 94 + 33 );
-    }
+    size_t sz = random( 8, max );
+    str = random_string( sz );
 }
 
 Client::Client( const char * ip, uint16_t port, uint32_t conv )

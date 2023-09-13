@@ -24,6 +24,11 @@ Connection::~Connection()
     ikcp_release( kcp );
 }
 
+void Connection::setlostrate( int lostrate )
+{
+    socket->setLostrate( lostrate );
+}
+
 void Connection::update()
 {
     ikcp_update( kcp, util::iclock() );

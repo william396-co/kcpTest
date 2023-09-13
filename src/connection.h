@@ -23,6 +23,7 @@ public:
     void recv_data( const char * data, size_t len );
 
     void set_show( bool _b ) { show_data = _b; }
+    void setlostrate( int lostrate );
 
 private:
     std::unique_ptr<UdpSocket> socket;

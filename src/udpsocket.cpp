@@ -1,8 +1,9 @@
 #include "udpsocket.h"
 #include <cstring> // memset
+#include "random_util.h"
 
 UdpSocket::UdpSocket()
-    : m_fd { 0 }
+    : m_fd { 0 }, lost_rate { 0 }
 {
     m_fd = ::socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
 }
@@ -57,11 +58,14 @@ void UdpSocket::close()
 
 int32_t UdpSocket::send( const char * bytes, uint32_t size )
 {
+    if ( random( 0, 100 ) < lost_rate ) return 0;
     return sendto( m_fd, bytes, size, 0, (struct sockaddr *)&m_remote_addr, sizeof( m_remote_addr ) );
 }
 
 int32_t UdpSocket::send( const char * bytes, uint32_t size, const char * ip, uint16_t port )
 {
+    if ( random( 0, 100 ) < lost_rate ) return 0;
+
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr( ip );

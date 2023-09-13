@@ -7,6 +7,7 @@ constexpr auto default_ip = "127.0.0.1";
 constexpr auto default_port = 9527;
 constexpr auto default_max_len = 2000;
 constexpr auto default_test_times = 1000;
+constexpr auto default_lost_rate = 10; // default lost rate is 10%
 
 bool is_running = true;
 
@@ -30,6 +31,7 @@ int main( int argc, char ** argv )
     uint16_t port = default_port;
     size_t max_len = default_max_len;
     int test_times = default_test_times;
+    int lost_rate = default_lost_rate;
 
     if ( argc >= 2 ) {
         ip = argv[1];
@@ -51,10 +53,14 @@ int main( int argc, char ** argv )
         test_times = atoi( argv[5] );
     }
 
-    srand( time( nullptr ) );
+    if ( argc >= 7 ) {
+        lost_rate = atoi( argv[6] );
+    }
+
     std::unique_ptr<Client> client = std::make_unique<Client>( ip.c_str(), port, conv );
     client->setmode( mode );
     client->setauto( true, test_times, max_len );
+    client->setlostrate( lost_rate );
 
     joining_thread work( &Client::run, client.get() );
     //  joining_thread input( &Client::input, client.get() );

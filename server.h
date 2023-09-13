@@ -43,6 +43,8 @@ public:
     void setmode( int mode );
     void show_data( bool _show ) { show = _show; }
 
+    void setlostrate( int lostrate ) { lost_rate = lostrate / 2; }
+
 private:
     std::unique_ptr<UdpSocket> listen;
     ConnMap connections;
@@ -50,5 +52,6 @@ private:
     int md;
     uint16_t listen_port;
     bool show = false;
+    int lost_rate = 0;
 };
 
