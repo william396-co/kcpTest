@@ -3,8 +3,7 @@
 #include "server.h"
 #include "src/joining_thread.h"
 
-constexpr auto ip = "127.0.0.1";
-constexpr auto port = 9527;
+constexpr auto default_port = 9527;
 
 bool is_running = true;
 
@@ -24,9 +23,15 @@ int main( int argc, char ** argv )
 
     handle_signal();
 
+    uint16_t port = default_port;
     int mode = 0;
+
     if ( argc >= 2 ) {
-        mode = atoi( argv[1] );
+        port = atoi( argv[1] );
+    }
+
+    if ( argc >= 3 ) {
+        mode = atoi( argv[2] );
     }
     std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
     server->setmode( mode );
