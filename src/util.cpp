@@ -43,6 +43,7 @@ void ikcp_set_log( ikcpcb * kcp, int mask )
 
 void rand_str( std::string & str )
 {
+    str.clear();
     size_t sz = rand() % 2000;
     for ( size_t i = 0; i != sz; ++i ) {
         str.push_back( rand() % 94 + 33 );

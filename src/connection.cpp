@@ -44,24 +44,12 @@ void Connection::recv_data( const char * data, size_t len )
     IUINT32 sn = *(IUINT32 *)( buff );
 
     if ( show_data )
-        printf( "RECV [%s:%d] -> [ %s:%d], sn:[%d] string is:{ %s}\n",
-            socket->getRemoteIp(),
-            socket->getRemotePort(),
-            socket->getLocalIp(),
-            socket->getLocalPort(),
-            sn + 1,
-            &buff[8] );
+        printf( "RECV mode=%d [%s:%d], sn:[%d] string is:{ %s}\n", md, socket->getRemoteIp(), socket->getRemotePort(), sn + 1, &buff[8] );
 
     else
-        printf( "RECV [%s:%d] -> [ %s:%d], sn:[%d]  ts{ %ld}\n",
-            socket->getRemoteIp(),
-            socket->getRemotePort(),
-            socket->getLocalIp(),
-            socket->getLocalPort(),
-            sn + 1,
-            util::now_ms() );
+        printf( "RECV mode=%d [%s:%d], sn:[%d]\n", md, socket->getRemoteIp(), socket->getRemotePort(), sn + 1 );
 
     ikcp_send( kcp, buff, rc );
-    ikcp_update( kcp, util::iclock() );
+    // ikcp_update( kcp, util::iclock() );
 }
 
