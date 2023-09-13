@@ -4,6 +4,7 @@
 #include "src/joining_thread.h"
 
 constexpr auto default_port = 9527;
+constexpr auto default_lost_rate = 10;
 
 bool is_running = true;
 
@@ -25,6 +26,7 @@ int main( int argc, char ** argv )
 
     uint16_t port = default_port;
     int mode = 0;
+    int lost_rate = default_lost_rate;
 
     if ( argc >= 2 ) {
         port = atoi( argv[1] );
@@ -33,8 +35,15 @@ int main( int argc, char ** argv )
     if ( argc >= 3 ) {
         mode = atoi( argv[2] );
     }
+
+    if ( argc >= 4 ) {
+        lost_rate = atoi( argv[2] );
+    }
+
     std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
     server->setmode( mode );
+    server->setlostrate( lost_rate );
+
     // server->show_data( true );
     //     util::ikcp_set_log(IKCP_LOG_INPUT|IKCP_LOG_OUTPUT);
 

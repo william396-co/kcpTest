@@ -26,6 +26,10 @@ public:
         test_count = test_times;
         str_max_len = max_len;
     }
+    void setlostrate( int lostrate )
+    {
+        client->setLostrate( lostrate / 2 );
+    }
 
 private:
     std::unique_ptr<UdpSocket> client;
