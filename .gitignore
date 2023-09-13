@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+kcp_test
+kcp_client
+kcp_server

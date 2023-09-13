@@ -58,7 +58,7 @@ void Client::auto_input()
 
             memcpy( &buff[8], str.data(), str.size() );
             ikcp_send( kcp, buff, str.size() + 8 );
-            //  ikcp_update( kcp, util::iclock() );
+            ikcp_update( kcp, util::iclock() );
         }
     }
 }
@@ -79,7 +79,7 @@ void Client::input()
 
             memcpy( &buff[8], writeBuffer.data(), writeBuffer.size() );
             ikcp_send( kcp, buff, writeBuffer.size() + 8 );
-            // ikcp_update( kcp, util::iclock() );
+            ikcp_update( kcp, util::iclock() );
         }
     }
 }
