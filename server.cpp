@@ -79,7 +79,7 @@ void Server::accept()
 void Server::run()
 {
     while ( is_running ) {
-
+        util::isleep( 1 );
         for ( auto & it : connections ) {
             it.second->update();
         }

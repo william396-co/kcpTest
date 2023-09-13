@@ -46,6 +46,7 @@ void Client::auto_input()
     std::string str;
     auto current = util::now_ms();
     while ( is_running && auto_test ) {
+        util::isleep( 1 );
 
         if ( g_sn >= test_count ) {
             printf( "finished auto send times=%d\n", g_sn );
