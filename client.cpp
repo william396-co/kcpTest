@@ -3,8 +3,19 @@
 #include <stdexcept>
 #include <cstring>
 #include <algorithm>
+#include <string>
+#include <cstdlib>
 
 static int g_sn = 0;
+
+void rand_str( std::string & str, size_t max = 2000 )
+{
+    str.clear();
+    size_t sz = rand() % max;
+    for ( size_t i = 0; i != sz; ++i ) {
+        str.push_back( rand() % 94 + 33 );
+    }
+}
 
 Client::Client( const char * ip, uint16_t port, uint32_t conv )
     : client { nullptr }, md { 0 }
@@ -45,7 +56,7 @@ void Client::auto_input()
             continue;
 
         current = util::now_ms();
-        util::rand_str( str );
+        rand_str( str, str_max_len );
         if ( !str.empty() ) {
             char buff[BUFFER_SIZE];
             ( (IUINT32 *)buff )[0] = g_sn++;
@@ -58,7 +69,7 @@ void Client::auto_input()
 
             memcpy( &buff[8], str.data(), str.size() );
             ikcp_send( kcp, buff, str.size() + 8 );
-            //  ikcp_update( kcp, util::iclock() );
+            ikcp_update( kcp, util::iclock() );
         }
     }
 }
@@ -79,7 +90,7 @@ void Client::input()
 
             memcpy( &buff[8], writeBuffer.data(), writeBuffer.size() );
             ikcp_send( kcp, buff, writeBuffer.size() + 8 );
-            // ikcp_update( kcp, util::iclock() );
+            ikcp_update( kcp, util::iclock() );
         }
     }
 }
@@ -130,5 +141,5 @@ void Client::run()
 
     /* summary */
     if ( count > 0 )
-        printf( "\n MODE=[%d] avgrtt=%d maxrtt=%d count=%d \n", md, int( sumrtt / count ), maxrtt, count );
+        printf( "\n MODE=[%d] DATASIZE=[%d] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, int( sumrtt / count ), maxrtt, count );
 }

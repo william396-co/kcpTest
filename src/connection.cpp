@@ -50,6 +50,6 @@ void Connection::recv_data( const char * data, size_t len )
         printf( "RECV mode=%d [%s:%d], sn:[%d]\n", md, socket->getRemoteIp(), socket->getRemotePort(), sn + 1 );
 
     ikcp_send( kcp, buff, rc );
-    // ikcp_update( kcp, util::iclock() );
+    ikcp_update( kcp, util::iclock() );
 }
 

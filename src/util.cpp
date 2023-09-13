@@ -41,15 +41,6 @@ void ikcp_set_log( ikcpcb * kcp, int mask )
     kcp->writelog = kcp_log;
 }
 
-void rand_str( std::string & str )
-{
-    str.clear();
-    size_t sz = rand() % 2000;
-    for ( size_t i = 0; i != sz; ++i ) {
-        str.push_back( rand() % 94 + 33 );
-    }
-}
-
 int32_t kcp_output( const char * buf, int len, ikcpcb * kcp, void * user )
 {
     UdpSocket * s = (UdpSocket *)user;

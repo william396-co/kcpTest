@@ -20,16 +20,18 @@ public:
     void auto_input();
 
     void setmode( int mode );
-    void setauto( bool _auto, uint32_t count = 100 )
+    void setauto( bool _auto, uint32_t test_times = 100, size_t max_len = 2000 )
     {
         auto_test = _auto;
-        test_count = count;
+        test_count = test_times;
+        str_max_len = max_len;
     }
 
 private:
     std::unique_ptr<UdpSocket> client;
     ikcpcb * kcp;
     int md;
+    size_t str_max_len;
     bool auto_test = false;
     uint32_t test_count = 10;
 };

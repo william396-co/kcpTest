@@ -98,8 +98,6 @@ void ikcp_set_mode( ikcpcb * kcp, int mode );
 
 void ikcp_set_log( ikcpcb * kcp, int mask );
 
-void rand_str( std::string & str );
-
 int32_t kcp_output( const char * buf, int len, ikcpcb * kcp, void * user );
 
 } // namespace util
