@@ -1,4 +1,6 @@
 #include <signal.h>
+#include <cstdlib>
+#include <ctime>
 
 #include "server.h"
 #include "src/joining_thread.h"
@@ -33,6 +35,8 @@ int main( int argc, char ** argv )
     if ( argc >= 3 ) {
         mode = atoi( argv[2] );
     }
+
+    srand( time( nullptr ) );
     std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
     server->setmode( mode );
     // server->show_data( true );
