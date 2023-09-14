@@ -4,7 +4,7 @@
 #include "src/joining_thread.h"
 
 constexpr auto default_port = 9527;
-constexpr auto default_lost_rate = 10;
+constexpr auto default_lost_rate = 0;
 
 bool is_running = true;
 
@@ -37,9 +37,10 @@ int main( int argc, char ** argv )
     }
 
     if ( argc >= 4 ) {
-        lost_rate = atoi( argv[2] );
+        lost_rate = atoi( argv[3] );
     }
 
+    printf( "Usage:<%s>  <port>:%d  <mode>:%s <lost_rate>:%d%\n", argv[0], port, util::get_mode_name( mode ), lost_rate );
     std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
     server->setmode( mode );
     server->setlostrate( lost_rate );

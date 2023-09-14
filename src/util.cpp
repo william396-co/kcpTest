@@ -2,10 +2,17 @@
 #include "udpsocket.h"
 
 namespace util {
-void ikcp_set_mode( ikcpcb * kcp, int mode )
+
+const char * get_mode_name( int mode )
 {
     assert( mode >= 0 && mode < 3 );
     const char * mode_name[] = { "DEFAULT", "NORMAL", "FAST" };
+    return mode_name[mode];
+}
+
+void ikcp_set_mode( ikcpcb * kcp, int mode )
+{
+    assert( mode >= 0 && mode < 3 );
 
     ikcp_wndsize( kcp, 128, 128 );
     switch ( mode ) {
@@ -27,7 +34,7 @@ void ikcp_set_mode( ikcpcb * kcp, int mode )
             break;
         }
     }
-    printf( "KCP run on [%s] mode\n", mode_name[mode] );
+    //    printf( "KCP run on [%s] mode\n", mode_name[mode] );
 }
 
 void kcp_log( const char * log, ikcpcb * kcp, void * user )
