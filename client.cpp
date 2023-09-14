@@ -46,6 +46,7 @@ void Client::auto_input()
     while ( is_running ) {
         if ( !auto_test )
             break;
+
         util::isleep( 1 );
 
         if ( g_sn >= test_count ) {
@@ -53,7 +54,7 @@ void Client::auto_input()
             break;
         }
 
-        if ( util::now_ms() - current < 20 )
+        if ( util::now_ms() - current < send_interval )
             continue;
 
         current = util::now_ms();
@@ -142,5 +143,5 @@ void Client::run()
 
     /* summary */
     if ( count > 0 )
-        printf( "\n MODE=[%d] DATASIZE=[%d] LOSTRATE=[%d%] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
+        printf( "\nMODE=[%d] DATASIZE=[%d] LOSTRATE=[%d%] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
 }

@@ -31,6 +31,10 @@ public:
         lost_rate = lostrate;
         client->setLostrate( lostrate / 2 );
     }
+    void setsendinterval( int sendinterval )
+    {
+        send_interval = sendinterval;
+    }
 
 private:
     std::unique_ptr<UdpSocket> client;
@@ -40,4 +44,5 @@ private:
     bool auto_test = false;
     uint32_t test_count = 10;
     int lost_rate = 0;
+    int send_interval = 20;
 };
