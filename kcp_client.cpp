@@ -8,6 +8,7 @@ constexpr auto default_port = 9527;
 constexpr auto default_max_len = 2000;
 constexpr auto default_test_times = 1000;
 constexpr auto default_lost_rate = 0;
+constexpr auto default_send_interval = 30; // ms
 
 bool is_running = true;
 
@@ -32,6 +33,7 @@ int main( int argc, char ** argv )
     size_t max_len = default_max_len;
     int test_times = default_test_times;
     int lost_rate = default_lost_rate;
+    int send_interval = default_send_interval;
 
     if ( argc >= 2 ) {
         ip = argv[1];
@@ -57,19 +59,25 @@ int main( int argc, char ** argv )
         lost_rate = atoi( argv[6] );
     }
 
-    printf( "Usage:<%s> <ip>:%s <port>:%d  <mode>:%s <max_len>:%d <times>:%d <lost_rate>:%d%\n",
+    if ( argc >= 8 ) {
+        send_interval = atoi( argv[7] );
+    }
+
+    printf( "Usage:<%s> <ip>:%s <port>:%d  <mode>:%s <max_len>:%d <times>:%d <lost_rate>:%d% <send_interval>:%dms\n",
         argv[0],
         ip.c_str(),
         port,
         util::get_mode_name( mode ),
         max_len,
         test_times,
-        lost_rate );
+        lost_rate,
+        send_interval );
 
     std::unique_ptr<Client> client = std::make_unique<Client>( ip.c_str(), port, conv );
     client->setmode( mode );
     client->setauto( true, test_times, max_len );
     client->setlostrate( lost_rate );
+    client->setsendinterval( send_interval );
 
     joining_thread work( &Client::run, client.get() );
     //  joining_thread input( &Client::input, client.get() );
