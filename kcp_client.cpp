@@ -7,7 +7,7 @@ constexpr auto default_ip = "127.0.0.1";
 constexpr auto default_port = 9527;
 constexpr auto default_max_len = 2000;
 constexpr auto default_test_times = 1000;
-constexpr auto default_lost_rate = 10; // default lost rate is 10%
+constexpr auto default_lost_rate = 0;
 
 bool is_running = true;
 
@@ -56,6 +56,15 @@ int main( int argc, char ** argv )
     if ( argc >= 7 ) {
         lost_rate = atoi( argv[6] );
     }
+
+    printf( "Usage:<%s> <ip>:%s <port>:%d  <mode>:%s <max_len>:%d <times>:%d <lost_rate>:%d%\n",
+        argv[0],
+        ip.c_str(),
+        port,
+        util::get_mode_name( mode ),
+        max_len,
+        test_times,
+        lost_rate );
 
     std::unique_ptr<Client> client = std::make_unique<Client>( ip.c_str(), port, conv );
     client->setmode( mode );

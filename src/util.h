@@ -93,6 +93,7 @@ inline bool get_remote_addr( int fd, struct sockaddr_in * addr )
 }
 
 /* interface about ikcp setting */
+const char * get_mode_name( int mode );
 
 void ikcp_set_mode( ikcpcb * kcp, int mode );
 
