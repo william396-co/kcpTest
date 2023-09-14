@@ -43,7 +43,9 @@ void Client::auto_input()
 {
     std::string str;
     auto current = util::now_ms();
-    while ( is_running && auto_test ) {
+    while ( is_running ) {
+        if ( !auto_test )
+            break;
         util::isleep( 1 );
 
         if ( g_sn >= test_count ) {
@@ -140,5 +142,5 @@ void Client::run()
 
     /* summary */
     if ( count > 0 )
-        printf( "\n MODE=[%d] DATASIZE=[%d] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, int( sumrtt / count ), maxrtt, count );
+        printf( "\n MODE=[%d] DATASIZE=[%d] LOSTRATE=[%d%] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
 }
