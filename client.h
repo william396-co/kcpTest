@@ -28,6 +28,7 @@ public:
     }
     void setlostrate( int lostrate )
     {
+        lost_rate = lostrate;
         client->setLostrate( lostrate / 2 );
     }
 
@@ -38,4 +39,5 @@ private:
     size_t str_max_len;
     bool auto_test = false;
     uint32_t test_count = 10;
+    int lost_rate = 0;
 };
