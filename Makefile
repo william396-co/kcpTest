@@ -12,6 +12,6 @@ client:
 	g++ -std=c++17 -lpthread -Wall -g $(src) client.cpp kcp_client.cpp -o kcp_client
 
 test:
-	g++ -std=c++17 -lpthread -Wall -g $(src) test.cpp -o kcp_test
+	g++ -std=c++17 -lpthread -g $(src) test.cpp -o kcp_test
 
 
