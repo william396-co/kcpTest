@@ -31,7 +31,7 @@ public:
     const char * getLocalIp() const { return inet_ntoa( m_local_addr.sin_addr ); }
     uint16_t getLocalPort() const { return ntohs( m_local_addr.sin_port ); }
 
-    void setLostrate( int rate ) { lost_rate; }
+    void setLostrate( int rate ) { lost_rate = rate; }
 
 private:
     int m_fd;
