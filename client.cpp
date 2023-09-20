@@ -65,9 +65,9 @@ void Client::auto_input()
             ( (IUINT32 *)buff )[1] = util::iclock();
 
             if ( auto_test )
-                printf( "[%ld]auto_input sn:%u size:%lu\n", util::now_ms(), g_sn, str.size() );
+                printf( "[%ld]auto_input sn:%u size:%lu\n", util::now_ms(), g_sn - 1, str.size() + 8 );
             else
-                printf( "[%ld]auto_input sn:%u content:{%s}\n", util::now_ms(), g_sn, str.c_str() );
+                printf( "[%ld]auto_input sn:%u content:{%s}\n", util::now_ms(), g_sn - 1, str.c_str() + 8 );
 
             memcpy( &buff[8], str.data(), str.size() );
             ikcp_send( kcp, buff, str.size() + 8 );
@@ -81,7 +81,7 @@ void Client::input()
     std::string writeBuffer;
     char buff[BUFFER_SIZE];
     while ( is_running ) {
-        printf( "Please enter a string to send to server(%s:%d):", client->getRemoteIp(), client->getRemotePort() );
+        printf( "Please enter a string to send to server(%s:%d):\n", client->getRemoteIp(), client->getRemotePort() );
 
         writeBuffer.clear();
         bzero( buff, sizeof( buff ) );
@@ -126,7 +126,7 @@ void Client::run()
         IUINT32 rtt = util::iclock() - ts;
 
         if ( sn != next ) {
-            printf( "ERROR sn %d<->%d\n", count, next );
+            printf( "ERROR sn %d<-> next=%d\n", sn, next );
             is_running = false;
             break;
         }
@@ -136,9 +136,9 @@ void Client::run()
         maxrtt = rtt > maxrtt ? rtt : maxrtt;
 
         if ( !auto_test )
-            printf( "[RECV] mode=%d sn:%d rrt:%d  content: {%s}\n", md, sn + 1, rtt, (char *)&buff[8] );
+            printf( "[RECV] mode=%d sn:%d rrt:%d  content: {%s}\n", md, sn, rtt, (char *)&buff[8] );
         else
-            printf( "[RECV] mode=%d sn:%d rrt:%d\n", md, sn + 1, rtt );
+            printf( "[RECV] mode=%d sn:%d rrt:%d\n", md, sn, rtt );
         if ( next >= test_count ) {
             printf( "Finished %d times test\n", test_count );
             is_running = false;
