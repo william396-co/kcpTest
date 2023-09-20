@@ -100,7 +100,7 @@ void Client::input()
 void Client::run()
 {
     char buff[BUFFER_SIZE];
-    uint32_t next = 0;
+    int next = 0;
     uint32_t sumrtt = 0;
     uint32_t count = 0;
     uint32_t maxrtt = 0;
@@ -125,7 +125,7 @@ void Client::run()
         IUINT32 ts = *(IUINT32 *)( buff + 4 );
         IUINT32 rtt = util::iclock() - ts;
 
-        if ( sn != next ) {
+        if ( sn != (uint32_t)next ) {
             printf( "ERROR sn %d<-> next=%d\n", sn, next );
             is_running = false;
             break;
@@ -148,5 +148,5 @@ void Client::run()
 
     /* summary */
     if ( count > 0 )
-        printf( "\nMODE=[%d] DATASIZE=[%d] LOSTRATE=[%d%] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
+        printf( "\nMODE=[%d] DATASIZE=[%d] LOSTRATE=[%d] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
 }

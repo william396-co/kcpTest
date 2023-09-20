@@ -20,7 +20,7 @@ public:
     void auto_input();
 
     void setmode( int mode );
-    void setauto( bool _auto, uint32_t test_times = 100, size_t max_len = 2000 )
+    void setauto( bool _auto, int test_times = 100, int max_len = 2000 )
     {
         auto_test = _auto;
         test_count = test_times;
@@ -40,9 +40,9 @@ private:
     std::unique_ptr<UdpSocket> client;
     ikcpcb * kcp;
     int md;
-    size_t str_max_len;
+    int str_max_len;
     bool auto_test = false;
-    uint32_t test_count = 10;
+    int test_count = 10;
     int lost_rate = 0;
     int send_interval = 20;
 };

@@ -40,7 +40,7 @@ int main( int argc, char ** argv )
         lost_rate = atoi( argv[3] );
     }
 
-    printf( "Usage:<%s>  <port>:%d  <mode>:%s <lost_rate>:%d%\n", argv[0], port, util::get_mode_name( mode ), lost_rate );
+    printf( "Usage:<%s>  <port>:%d  <mode>:%s <lost_rate>:%d\n", argv[0], port, util::get_mode_name( mode ), lost_rate );
     std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
     server->setmode( mode );
     server->setlostrate( lost_rate );
