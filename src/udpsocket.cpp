@@ -58,13 +58,13 @@ void UdpSocket::close()
 
 int32_t UdpSocket::send( const char * bytes, uint32_t size )
 {
-    if ( random( 0, 100 ) < lost_rate ) return 0;
+    if ( random( 0, 100 ) < lost_rate ) return 0; // lost rate condition test
     return sendto( m_fd, bytes, size, 0, (struct sockaddr *)&m_remote_addr, sizeof( m_remote_addr ) );
 }
 
 int32_t UdpSocket::send( const char * bytes, uint32_t size, const char * ip, uint16_t port )
 {
-    if ( random( 0, 100 ) < lost_rate ) return 0;
+    if ( random( 0, 100 ) < lost_rate ) return 0; // lost rate condition test
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;

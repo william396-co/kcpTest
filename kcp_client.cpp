@@ -5,7 +5,7 @@
 
 constexpr auto default_ip = "127.0.0.1";
 constexpr auto default_port = 9527;
-constexpr auto default_max_len = 2000;
+constexpr auto default_max_len = 500;
 constexpr auto default_test_times = 1000;
 constexpr auto default_lost_rate = 0;
 constexpr auto default_send_interval = 30; // ms
@@ -80,7 +80,7 @@ int main( int argc, char ** argv )
     client->setsendinterval( send_interval );
 
     joining_thread work( &Client::run, client.get() );
-    //  joining_thread input( &Client::input, client.get() );
+    joining_thread input( &Client::input, client.get() );
     joining_thread auto_input( &Client::auto_input, client.get() );
 
     return 0;
