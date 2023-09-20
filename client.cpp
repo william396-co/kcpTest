@@ -127,6 +127,7 @@ void Client::run()
 
         if ( sn != next ) {
             printf( "ERROR sn %d<->%d\n", count, next );
+            is_running = false;
             break;
         }
         ++next;
@@ -138,7 +139,11 @@ void Client::run()
             printf( "[RECV] mode=%d sn:%d rrt:%d  content: {%s}\n", md, sn + 1, rtt, (char *)&buff[8] );
         else
             printf( "[RECV] mode=%d sn:%d rrt:%d\n", md, sn + 1, rtt );
-        if ( next >= test_count ) break;
+        if ( next >= test_count ) {
+            printf( "Finished %d times test\n", test_count );
+            is_running = false;
+            break;
+        }
     }
 
     /* summary */
