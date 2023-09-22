@@ -40,6 +40,10 @@ public:
     {
         is_running = false;
     }
+    void set_index( int idx_ )
+    {
+        idx = idx_;
+    }
 
 private:
     void send( const char * data, size_t len );
@@ -61,4 +65,5 @@ private:
     uint32_t maxrtt = 0;
     bool show_info = false;
     bool is_running = true;
+    int idx = 0;
 };

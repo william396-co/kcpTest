@@ -32,6 +32,7 @@ public:
     uint16_t getLocalPort() const { return ntohs( m_local_addr.sin_port ); }
 
     void setLostrate( int rate ) { lost_rate = rate; }
+    int getFd() const { return m_fd; }
 
 private:
     int m_fd;

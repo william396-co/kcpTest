@@ -45,9 +45,9 @@ void Client::send( const char * data, size_t len )
     ( (uint32_t *)buff )[2] = (uint32_t)len;
 
     if ( show_info ) {
-        printf( "Send sn:%u size:%lu content {%s}\n", sn - 1, size_t( len + 12 ), data );
+        printf( "Send idx:%u sn:%u size:%lu content {%s}\n", idx, sn - 1, size_t( len + 12 ), data );
     } else {
-        printf( "Send sn:%u size:%lu\n", sn - 1, size_t( len + 12 ) );
+        printf( "Send idx:%u sn:%u size:%lu\n", idx, sn - 1, size_t( len + 12 ) );
     }
     memcpy( &buff[12], data, len );
     ikcp_send( kcp, buff, len + 12 );
@@ -87,9 +87,9 @@ void Client::recv( const char * data, size_t len )
         maxrtt = rtt_ > maxrtt ? rtt_ : maxrtt;
 
         if ( show_info )
-            printf( "[RECV] mode=%d sn:%d rrt:%d size:%u  content: {%s}\n", md, sn_, rtt_, sz_, (char *)&ptr_[12] );
+            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u  content: {%s}\n", idx, md, sn_, rtt_, sz_, (char *)&ptr_[12] );
         else
-            printf( "[RECV] mode=%d sn:%d rrt:%d size:%u \n", md, sn_, rtt_, sz_ );
+            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u \n", idx, md, sn_, rtt_, sz_ );
 
         if ( next >= test_count ) {
             printf( "Finished %d times test\n", test_count );
@@ -111,7 +111,8 @@ void Client::run()
         if ( auto_test && util::now_ms() - current_ >= send_interval ) {
             if ( sn >= test_count ) {
                 printf( "finished auto send times=%d\n", sn );
-                continue;
+                ikcp_update( kcp, util::iclock() );
+                auto_test = false;
             }
 
             current_ = util::now_ms();
@@ -135,7 +136,8 @@ void Client::run()
 
     /* summary */
     if ( count > 0 )
-        printf( "\nMODE=[%d] DATASIZE=[%d] LOSTRATE=[%d] avgrtt=%d maxrtt=%d count=%d \n",
+        printf( "\nIDX=[%u] MODE=[%d] DATASIZE=[%d] LOSTRATE=[%d] avgrtt=%d maxrtt=%d count=%d \n",
+            idx,
             md,
             str_max_len,
             lost_rate,
