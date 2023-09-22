@@ -10,11 +10,11 @@ constexpr auto default_test_times = 1000;
 constexpr auto default_lost_rate = 0;
 constexpr auto default_send_interval = 30; // ms
 
-bool is_running = true;
+bool g_running = true;
 
 void signal_handler( int sig )
 {
-    is_running = false;
+    g_running = false;
 }
 void handle_signal()
 {
@@ -81,7 +81,12 @@ int main( int argc, char ** argv )
 
     joining_thread work( &Client::run, client.get() );
     joining_thread input( &Client::input, client.get() );
-    joining_thread auto_input( &Client::auto_input, client.get() );
+
+    while ( g_running ) {
+        std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
+    }
+
+    client->terminate();
 
     return 0;
 }

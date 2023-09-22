@@ -7,8 +7,6 @@
 #include <cstdlib>
 #include "src/random_util.h"
 
-static int g_sn = 0;
-
 void rand_str( std::string & str, size_t max = 2000 )
 {
     size_t sz = random( 8, max );
@@ -16,15 +14,15 @@ void rand_str( std::string & str, size_t max = 2000 )
 }
 
 Client::Client( const char * ip, uint16_t port, uint32_t conv )
-    : client { nullptr }, md { 0 }
+    : socket { nullptr }, md { 0 }
 {
-    client = std::make_unique<UdpSocket>();
-    client->setNonblocking();
-    if ( !client->connect( ip, port ) ) {
-        throw std::runtime_error( "client connect failed" );
+    socket = std::make_unique<UdpSocket>();
+    socket->setNonblocking();
+    if ( !socket->connect( ip, port ) ) {
+        throw std::runtime_error( "socket connect failed" );
     }
 
-    kcp = ikcp_create( conv, client.get() );
+    kcp = ikcp_create( conv, socket.get() );
     ikcp_setoutput( kcp, util::kcp_output );
 }
 
@@ -39,114 +37,111 @@ void Client::setmode( int mode )
     md = mode;
 }
 
-void Client::auto_input()
+void Client::send( const char * data, size_t len )
 {
-    std::string str;
-    auto current = util::now_ms();
-    while ( is_running ) {
-        if ( !auto_test )
-            break;
+    char buff[BUFFER_SIZE] = {};
+    ( (uint32_t *)buff )[0] = sn++;
+    ( (uint32_t *)buff )[1] = util::iclock();
+    ( (uint32_t *)buff )[2] = (uint32_t)len;
 
-        util::isleep( 1 );
-
-        if ( g_sn >= test_count ) {
-            printf( "finished auto send times=%d\n", g_sn );
-            break;
-        }
-
-        if ( util::now_ms() - current < send_interval )
-            continue;
-
-        current = util::now_ms();
-        rand_str( str, str_max_len );
-        if ( !str.empty() ) {
-            char buff[BUFFER_SIZE];
-            ( (IUINT32 *)buff )[0] = g_sn++;
-            ( (IUINT32 *)buff )[1] = util::iclock();
-
-            if ( auto_test )
-                printf( "[%ld]auto_input sn:%u size:%lu\n", util::now_ms(), g_sn - 1, str.size() + 8 );
-            else
-                printf( "[%ld]auto_input sn:%u content:{%s}\n", util::now_ms(), g_sn - 1, str.c_str() + 8 );
-
-            memcpy( &buff[8], str.data(), str.size() );
-            ikcp_send( kcp, buff, str.size() + 8 );
-            ikcp_update( kcp, util::iclock() );
-        }
+    if ( show_info ) {
+        printf( "Send idx:%u sn:%u size:%lu content {%s}\n", idx, sn - 1, size_t( len + 12 ), data );
+    } else {
+        printf( "Send idx:%u sn:%u size:%lu\n", idx, sn - 1, size_t( len + 12 ) );
     }
+    memcpy( &buff[12], data, len );
+    ikcp_send( kcp, buff, len + 12 );
+    ikcp_update( kcp, util::iclock() );
 }
 
 void Client::input()
 {
     std::string writeBuffer;
-    char buff[BUFFER_SIZE];
     while ( is_running ) {
-        printf( "Please enter a string to send to server(%s:%d):\n", client->getRemoteIp(), client->getRemotePort() );
+        printf( "Please enter a string to send to server(%s:%d):\n", socket->getRemoteIp(), socket->getRemotePort() );
 
         writeBuffer.clear();
-        bzero( buff, sizeof( buff ) );
         std::getline( std::cin, writeBuffer );
         if ( !writeBuffer.empty() ) {
-            ( (IUINT32 *)buff )[0] = g_sn++;
-            ( (IUINT32 *)buff )[1] = util::iclock();
-
-            memcpy( &buff[8], writeBuffer.data(), writeBuffer.size() );
-            ikcp_send( kcp, buff, writeBuffer.size() + 8 );
-            ikcp_update( kcp, util::iclock() );
+            send( writeBuffer.data(), writeBuffer.size() );
         }
+    }
+}
+
+void Client::recv( const char * data, size_t len )
+{
+    char * ptr_ = (char *)data;
+    while ( size_t( ptr_ - data ) < len ) {
+        uint32_t sn_ = *(uint32_t *)( ptr_ );
+        uint32_t ts_ = *(uint32_t *)( ptr_ + 4 );
+        uint32_t sz_ = *(uint32_t *)( ptr_ + 8 ) + 12;
+
+        uint32_t rtt_ = util::iclock() - ts_;
+        if ( sn_ != (uint32_t)next ) {
+            printf( "ERROR sn %u<-> next=%d\n", sn, next );
+            is_running = false;
+        }
+        ++next;
+        sumrtt += rtt_;
+        ++count;
+        maxrtt = rtt_ > maxrtt ? rtt_ : maxrtt;
+
+        if ( show_info )
+            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u  content: {%s}\n", idx, md, sn_, rtt_, sz_, (char *)&ptr_[12] );
+        else
+            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u \n", idx, md, sn_, rtt_, sz_ );
+
+        if ( next >= test_count ) {
+            printf( "Finished %d times test\n", test_count );
+            is_running = false;
+        }
+        ptr_ += sz_;
     }
 }
 
 void Client::run()
 {
+    auto current_ = util::now_ms();
     char buff[BUFFER_SIZE];
-    int next = 0;
-    uint32_t sumrtt = 0;
-    uint32_t count = 0;
-    uint32_t maxrtt = 0;
-
     while ( is_running ) {
-        util::isleep( 1 );
+        //  util::isleep( 1 );
         ikcp_update( kcp, util::iclock() );
 
-        // udp pack received
-        if ( client->recv() < 0 ) {
+        // auto input test
+        if ( auto_test && util::now_ms() - current_ >= send_interval ) {
+            if ( sn >= test_count ) {
+                printf( "finished auto send times=%d\n", sn );
+                ikcp_update( kcp, util::iclock() );
+                auto_test = false;
+            }
+
+            current_ = util::now_ms();
+            std::string writeBuffer;
+            rand_str( writeBuffer, str_max_len );
+            if ( !writeBuffer.empty() ) {
+                send( writeBuffer.data(), writeBuffer.size() );
+            }
+        }
+
+        // recv pack
+        if ( socket->recv() < 0 ) {
             continue;
         }
-        ikcp_input( kcp, client->getRecvBuffer(), client->getRecvSize() );
-
+        ikcp_input( kcp, socket->getRecvBuffer(), socket->getRecvSize() );
         bzero( buff, sizeof( buff ) );
-        // user/logic package received
-        int rc = ikcp_recv( kcp, buff, BUFFER_SIZE );
-        if ( rc < 0 )
-            continue;
-
-        IUINT32 sn = *(IUINT32 *)( buff + 0 );
-        IUINT32 ts = *(IUINT32 *)( buff + 4 );
-        IUINT32 rtt = util::iclock() - ts;
-
-        if ( sn != (uint32_t)next ) {
-            printf( "ERROR sn %d<-> next=%d\n", sn, next );
-            is_running = false;
-            break;
-        }
-        ++next;
-        sumrtt += rtt;
-        ++count;
-        maxrtt = rtt > maxrtt ? rtt : maxrtt;
-
-        if ( !auto_test )
-            printf( "[RECV] mode=%d sn:%d rrt:%d  content: {%s}\n", md, sn, rtt, (char *)&buff[8] );
-        else
-            printf( "[RECV] mode=%d sn:%d rrt:%d\n", md, sn, rtt );
-        if ( next >= test_count ) {
-            printf( "Finished %d times test\n", test_count );
-            is_running = false;
-            break;
-        }
+        int rc = ikcp_recv( kcp, buff, sizeof( buff ) );
+        if ( rc < 0 ) continue;
+        recv( buff, rc );
     }
 
     /* summary */
     if ( count > 0 )
-        printf( "\nMODE=[%d] DATASIZE=[%d] LOSTRATE=[%d] avgrtt=%d maxrtt=%d count=%d \n", md, str_max_len, lost_rate, int( sumrtt / count ), maxrtt, count );
+        printf( "\nIDX=[%u] MODE=[%d] DATASIZE=[%d] LOSTRATE=[%d] avgrtt=%d maxrtt=%d count=%d \n",
+            idx,
+            md,
+            str_max_len,
+            lost_rate,
+            int( sumrtt / count ),
+            maxrtt,
+            count );
 }
