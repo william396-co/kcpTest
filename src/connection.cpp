@@ -42,7 +42,7 @@ void Connection::recv_data( const char * data, size_t len )
     ikcp_input( kcp, data, len );
 
     char buff[BUFFER_SIZE];
-    bzero( buff, sizeof( buff ) );
+	std::memset(buff, 0, sizeof(buff));
     int rc = ikcp_recv( kcp, buff, sizeof( buff ) );
     if ( rc < 0 ) return;
 

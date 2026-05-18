@@ -45,9 +45,9 @@ void Client::send( const char * data, size_t len )
     ( (uint32_t *)buff )[2] = (uint32_t)len;
 
     if ( show_info ) {
-        printf( "Send idx:%u sn:%u size:%lu content {%s}\n", idx, sn - 1, size_t( len + 12 ), data );
+        printf( "Send idx:%u sn:%u size:%llu content {%s}\n", idx, sn - 1, size_t( len + 12 ), data );
     } else {
-        printf( "Send idx:%u sn:%u size:%lu\n", idx, sn - 1, size_t( len + 12 ) );
+        printf( "Send idx:%u sn:%u size:%llu\n", idx, sn - 1, size_t( len + 12 ) );
     }
     memcpy( &buff[12], data, len );
     ikcp_send( kcp, buff, len + 12 );
