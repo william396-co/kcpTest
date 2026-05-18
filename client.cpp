@@ -128,7 +128,7 @@ void Client::run()
             continue;
         }
         ikcp_input( kcp, socket->getRecvBuffer(), socket->getRecvSize() );
-        bzero( buff, sizeof( buff ) );
+        std::memset(buff, 0, sizeof(buff));
         int rc = ikcp_recv( kcp, buff, sizeof( buff ) );
         if ( rc < 0 ) continue;
         recv( buff, rc );

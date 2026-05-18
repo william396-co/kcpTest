@@ -22,7 +22,9 @@ void signal_handler( int sig )
 }
 void handle_signal()
 {
+#ifdef SIGPIPE
     signal( SIGPIPE, SIG_IGN );
+#endif
     signal( SIGINT, signal_handler );
     signal( SIGTERM, signal_handler );
 }
@@ -41,6 +43,15 @@ std::unique_ptr<Client> start_client( int idx, const char * ip, uint16_t port, i
 
 int main( int argc, char ** argv )
 {
+#ifdef _WIN32
+    WSADATA wsaData{};
+    int rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (rc != 0) {
+        printf("WSAStartup failed: %d\n", rc);
+        return 1;
+    }
+#endif
+
     handle_signal();
 
     int mode = 2;
@@ -75,6 +86,8 @@ int main( int argc, char ** argv )
     for ( int i = 0; i != client_cnt; ++i ) {
         clients[i]->terminate();
     }
-
+#ifdef _WIN32
+    WSACleanup();
+#endif
     return 0;
 }

@@ -14,13 +14,23 @@ void signal_handler( int sig )
 }
 void handle_signal()
 {
+#ifdef SIGPIPE
     signal( SIGPIPE, SIG_IGN );
+#endif
     signal( SIGINT, signal_handler );
     signal( SIGTERM, signal_handler );
 }
 
 int main( int argc, char ** argv )
 {
+#ifdef _WIN32
+    WSADATA wsaData{};
+    int rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (rc != 0) {
+        printf("WSAStartup failed: %d\n", rc);
+        return 1;
+    }
+#endif
 
     handle_signal();
 
@@ -45,11 +55,13 @@ int main( int argc, char ** argv )
     server->setmode( mode );
     server->setlostrate( lost_rate );
 
-    // server->show_data( true );
+     server->show_data( true );
     //     util::ikcp_set_log(IKCP_LOG_INPUT|IKCP_LOG_OUTPUT);
 
     joining_thread accept( &Server::accept, server.get() );
     joining_thread work( &Server::run, server.get() );
-
+#ifdef _WIN32
+    WSACleanup();
+#endif
     return 0;
 }
