@@ -10,11 +10,13 @@
 class Client
 {
 public:
-    Client( const char * ip, uint16_t port, uint32_t conv );
+    Client(const char * ip, uint16_t port );
     ~Client();
 
-    void run();
-    void input();
+    void recv_work();
+    void send_work();
+
+    void rand_send_work();// for multiple client
 
     void setmode( int mode );
     void setauto( bool _auto, int test_times = 100, int max_len = 2000 )
@@ -48,10 +50,15 @@ public:
 private:
     void send( const char * data, size_t len );
     void recv( const char * data, size_t len );
+public:
+    void recv_data(const char* buf, size_t len);// low level recv
+        
+    void send_shakehand();     // first send shakehand
+    void recv_shakehand(uint32_t conv);// recieve shakehand from server
 
 private:
     std::unique_ptr<UdpSocket> socket;
-    ikcpcb * kcp;
+    ikcpcb* kcp{};
     int md;
     int str_max_len;
     bool auto_test = false;

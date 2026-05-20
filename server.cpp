@@ -8,20 +8,14 @@
 #include <iostream>
 #include <stdexcept>
 
-Server::Server( uint16_t port, uint32_t conv )
-    : listen { nullptr }, md { 0 }, listen_port { port }
+Server::Server(uint16_t port)
+    : listen{ nullptr }, md{ 0 }, listen_port{ port }
 {
     listen = std::make_unique<UdpSocket>();
     listen->setNonblocking();
-    if ( !listen->bind( port ) ) {
+    if (!listen->bind(port)) {
         throw std::runtime_error( "listen socket bind error" );
     }
-
-    kcp = ikcp_create( conv, listen.get() );
-    ikcp_setoutput( kcp, util::kcp_output );
-
-    ikcp_wndsize( kcp, 128, 128 );
-    ikcp_nodelay( kcp, 0, 10, 0, 0 );
 }
 
 Server::~Server()
@@ -29,59 +23,111 @@ Server::~Server()
     for ( auto & it : connections ) {
         delete it.second;
     }
-
-    ikcp_release( kcp );
 }
 
 void Server::setmode( int mode )
-{
-    util::ikcp_set_mode( kcp, mode );
+{    
     md = mode;
 }
 
-Connection * Server::findConn( const char * remote_ip, uint16_t remote_port )
+uint32_t Server::alloc_conv() const
 {
-    auto it = connections.find( std::make_pair( remote_ip, remote_port ) );
+    auto conv = 0;
+    do
+    {
+        conv = ++nextConv;
+    } while (connections.count(conv));
+    return conv;
+}
+
+Connection* Server::createConn(UdpSocket* socket, const char* remote_ip, uint16_t remote_port, uint32_t conv)
+{
+    auto it = connections.find(conv);
     if ( it != connections.end() ) {
         return it->second;
     }
-    Connection * conn = new Connection( listen_port, remote_ip, remote_port, conv );
+    Connection* conn = new Connection(socket, remote_ip, remote_port, conv);
     conn->setmode( md );
     conn->set_show( show );
+    conn->setmode(md);
     if ( conn ) {
-        connections.emplace( std::make_pair( remote_ip, remote_port ), conn );
-        printf( "new Connection:[%s:%d] accepted\n", remote_ip, remote_port );
+        connections.emplace(conv, conn);
+        printf("new Connection:[%s:%d] accepted\n", remote_ip, remote_port);
         return conn;
     }
     delete conn;
     return nullptr;
 }
 
-void Server::accept()
+Connection* Server::findConn(uint32_t conv) const
+{
+    auto it = connections.find(conv);
+    if (it != connections.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+void Server::recv_work()
 {
     while ( is_running ) {
         util::isleep( 1 );
-        ikcp_update( kcp, util::iclock() );
 
         // lower level recv
         if ( listen->recv() <= 0 ) {
             continue;
         }
 
-        auto conn = findConn( listen->getRemoteIp(), listen->getRemotePort() );
-        if ( conn ) {
-            conn->recv_data( listen->getRecvBuffer(), listen->getRecvSize() );
-            continue;
-        }
+        recv_data(listen->getRecvBuffer(), listen->getRecvSize());
     }
 }
 
-void Server::run()
+void Server::send_work()
 {
     while ( is_running ) {
         util::isleep( 1 );
         for ( auto & it : connections ) {
             it.second->update();
         }
+    }
+}
+
+void Server::recv_data(const char* buf, size_t len)
+{
+    DecodedPacket pkt{};
+    if (!decode_packet(buf, len, pkt)) {
+        return;
+    }
+
+    switch (pkt.type) {
+    case PacketType::PKT_HANDSHAKE_REQ:        
+    {
+        // handle sharehand
+        // server: allocate conv and reply
+        uint32_t conv = alloc_conv();
+		std::cout << "conv: " << conv << "remoteIp: " << listen->getRemoteIp() << "remotePort: " << listen->getRemotePort() << "\n";
+        auto conn = createConn(listen.get(), listen->getRemoteIp(), listen->getRemotePort(), conv);
+        if (conn) {
+            conn->send_shakehand_reply();
+        }
+        break;
+    }
+    case PacketType::PKT_KCP_DATA:
+    {
+        // pass pkt.payload / pkt.size to ikcp_input()
+        auto conn = findConn(pkt.conv);
+        if (!conn) {
+            std::cout << " cannot find connection,conv:" << pkt.conv << "\n";
+        }
+        else {
+            conn->recv(pkt.payload, pkt.size);
+        }
+        break;
+    }
+    case PacketType::PKT_HANDSHAKE_ACK:
+    {
+        std::cerr << "invalid PacketType: " << pkt.type << "\n";
+        break;
+    }
     }
 }

@@ -16,9 +16,10 @@ public:
     bool connect( const char * ip, uint16_t port );
 
     void close();
-    int32_t send( const char * bytes, uint32_t size );
-    int32_t send( const char * bytes, uint32_t size, const char * ip, uint16_t port );
+	int32_t send(const char* bytes, uint32_t size,uint32_t conv, PacketType type);
+    int32_t send(const char * bytes, uint32_t size, const char * ip, uint16_t port, uint32_t conv, PacketType type);
     int32_t recv();
+    int32_t recv(uint32_t& conv);
 
     const char * getRecvBuffer() const { return m_recvBuffer; }
     uint32_t getRecvSize() const { return m_recvSize; }
@@ -39,6 +40,6 @@ private:
     struct sockaddr_in m_local_addr;
     struct sockaddr_in m_remote_addr;
     char m_recvBuffer[RECV_BUF_SIZE];
-    uint32_t m_recvSize;
+    int m_recvSize;
     int lost_rate; // lost package rate
 };

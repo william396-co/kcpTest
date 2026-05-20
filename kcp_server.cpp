@@ -51,15 +51,20 @@ int main( int argc, char ** argv )
     }
 
     printf( "Usage:<%s>  <port>:%d  <mode>:%s <lost_rate>:%d\n", argv[0], port, util::get_mode_name( mode ), lost_rate );
-    std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
+    std::unique_ptr<Server> server = std::make_unique<Server>( port );
     server->setmode( mode );
     server->setlostrate( lost_rate );
 
      server->show_data( true );
-    //     util::ikcp_set_log(IKCP_LOG_INPUT|IKCP_LOG_OUTPUT);
 
-    joining_thread accept( &Server::accept, server.get() );
-    joining_thread work( &Server::run, server.get() );
+    joining_thread accept( &Server::recv_work, server.get() );
+    joining_thread work( &Server::send_work, server.get() );
+
+
+    while (is_running) {
+
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+    }
 #ifdef _WIN32
     WSACleanup();
 #endif

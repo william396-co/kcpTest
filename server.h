@@ -25,33 +25,37 @@ struct hash<ConnID>
 };
 } // namespace std
 
-using ConnMap = std::unordered_map<ConnID, Connection *>;
+using ConnMap = std::unordered_map<uint32_t, Connection *>;
 
 extern bool is_running;
 
 class Server
 {
 public:
-    Server( uint16_t port, uint32_t conv );
+    Server(uint16_t port);
     ~Server();
 
-    Connection * findConn( const char * ip, uint16_t port );
+    Connection * createConn(UdpSocket* socket, const char * ip, uint16_t port, uint32_t conv );
 
-    void accept();
-    void run();
+    Connection* findConn(uint32_t conv)const;
+
+    void recv_work();
+    void send_work();
+    void recv_data(const char* buf, size_t len); // low leve recv
 
     void setmode( int mode );
     void show_data( bool _show ) { show = _show; }
 
     void setlostrate( int lostrate ) { lost_rate = lostrate / 2; }
 
+    uint32_t alloc_conv()const;
 private:
     std::unique_ptr<UdpSocket> listen;
     ConnMap connections;
-    ikcpcb * kcp;
     int md;
     uint16_t listen_port;
     bool show = false;
     int lost_rate = 0;
+	mutable uint32_t nextConv{ 1000 };
 };
 

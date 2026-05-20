@@ -52,7 +52,7 @@ int32_t kcp_output( const char * buf, int len, ikcpcb * kcp, void * user )
 {
     UdpSocket * s = (UdpSocket *)user;
     if ( s )
-        return s->send( buf, len );
+		return s->send(buf, len, kcp->conv, PKT_KCP_DATA);
     return -1;
 }
 

@@ -83,14 +83,15 @@ int main( int argc, char ** argv )
         lost_rate,
         send_interval );
 
-    std::unique_ptr<Client> client = std::make_unique<Client>( ip.c_str(), port, conv );
+	std::unique_ptr<Client> client = std::make_unique<Client>(ip.c_str(), port);
     client->setmode( mode );
     client->setauto( true, test_times, max_len );
     client->setlostrate( lost_rate );
     client->setsendinterval( send_interval );
+    client->set_show_info(true);
 
-    //joining_thread work( &Client::run, client.get() );
-    joining_thread input( &Client::input, client.get() );
+    joining_thread work( &Client::recv_work, client.get() );
+    joining_thread input( &Client::send_work, client.get() );
 
     while ( g_running ) {
         std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );

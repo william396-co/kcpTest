@@ -22,7 +22,8 @@ string random_string(int len) {
 	string res;
 	int temp = random(0, len);
 	while (temp--) {
-		res.push_back(random(0, 26) + 'a');
+		char c = char(random(0, 26) + 'a');
+		res += c;
 	}
 	return res;
 }
