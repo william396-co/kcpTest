@@ -25,6 +25,7 @@ Server::~Server()
     }
 }
 
+
 void Server::setmode( int mode )
 {    
     md = mode;
@@ -77,22 +78,21 @@ void Server::recv_work()
         if ( listen->recv() <= 0 ) {
             continue;
         }
-
-        recv_data(listen->getRecvBuffer(), listen->getRecvSize());
+        parse_udp_data(listen->getRecvBuffer(), listen->getRecvSize());
     }
 }
 
 void Server::send_work()
 {
-    while ( is_running ) {
-        util::isleep( 1 );
-        for ( auto & it : connections ) {
-            it.second->update();
-        }
-    }
+	while (is_running) {
+		util::isleep(1);
+		for (auto& it : connections) {
+			it.second->update();
+		}
+	}
 }
 
-void Server::recv_data(const char* buf, size_t len)
+void Server::parse_udp_data(const char* buf, size_t len)
 {
     DecodedPacket pkt{};
     if (!decode_packet(buf, len, pkt)) {
@@ -120,7 +120,7 @@ void Server::recv_data(const char* buf, size_t len)
             std::cout << " cannot find connection,conv:" << pkt.conv << "\n";
         }
         else {
-            conn->recv(pkt.payload, pkt.size);
+            conn->recv_data(pkt.payload, pkt.size);
         }
         break;
     }

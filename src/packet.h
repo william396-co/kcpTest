@@ -20,6 +20,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #endif
+
 constexpr uint32_t MAGIC_VAL = 0x34b569df;
 
 enum PacketType : uint8_t {
@@ -28,11 +29,14 @@ enum PacketType : uint8_t {
     PKT_KCP_DATA      = 3,
 };
 
+#pragma pack(push, 1)
 struct PacketHeader {
     uint32_t magic;   // fixed value, for example 0x4B435030
-    uint32_t conv;    // 0 before handshake, assigned conv after handshake
     uint8_t  type;    // handshake req / ack / kcp data
+    uint32_t conv;    // 0 before handshake, assigned conv after handshake
+    uint32_t size;    // size of paylod
 };
+#pragma pack(pop)
 
  inline void write_u32(char* p, uint32_t v)
 {
@@ -47,23 +51,9 @@ inline uint32_t read_u32(const char* p)
     return ntohl(n);
 }
 
-constexpr auto HEADER_SIZE = sizeof(PacketHeader) + 1;
+constexpr auto HEADER_SIZE = sizeof(PacketHeader);
 
-inline std::string encode_packet(PacketType type, uint32_t conv, const char* payload, uint32_t size)
-{
-    std::string out;
-    out.resize(HEADER_SIZE + size);
-
-    write_u32(&out[0], MAGIC_VAL);
-    out[4] = static_cast<char>(type);
-    write_u32(&out[5], conv);
-    write_u32(&out[9], size);
-
-    if (size > 0) {
-        std::memcpy(&out[HEADER_SIZE], payload, size);
-    }
-    return out;
-}
+std::string encode_packet(PacketType type, uint32_t conv, const char* payload, uint32_t size);
 
 struct DecodedPacket {
     PacketType type{};
@@ -72,25 +62,16 @@ struct DecodedPacket {
     uint32_t size{};
 };
 
-inline bool decode_packet(const char* data, size_t len, DecodedPacket& out)
-{
-    if (len < HEADER_SIZE) {
-        return false;
-    }
+bool decode_packet(const char* data, size_t len, DecodedPacket& out);
 
-    uint32_t magic = read_u32(data);
-    if (magic != MAGIC_VAL) {
-        return false;
-    }
 
-    out.type = static_cast<PacketType>(static_cast<uint8_t>(data[4]));
-    out.conv = read_u32(data + 5);
-    out.size = read_u32(data + 9);
+#pragma pack(push, 1)
+struct MsgHeader {
+    uint32_t sn; // sn
+    time_t ts;   // timestamp
+    uint32_t sz; // datasize;
+   // char* data;
+};
+#pragma pack(pop)
 
-    if (len < HEADER_SIZE + out.size) {
-        return false;
-    }
-
-    out.payload = data + HEADER_SIZE;
-    return true;
-}
+constexpr auto MsgHeaderSize = sizeof(MsgHeader);

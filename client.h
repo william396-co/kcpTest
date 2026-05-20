@@ -51,7 +51,7 @@ private:
     void send( const char * data, size_t len );
     void recv( const char * data, size_t len );
 public:
-    void recv_data(const char* buf, size_t len);// low level recv
+    void parse_udp_data(const char* buf, size_t len);// parse data from plain udp
         
     void send_shakehand();     // first send shakehand
     void recv_shakehand(uint32_t conv);// recieve shakehand from server
@@ -73,4 +73,9 @@ private:
     bool show_info = false;
     bool is_running = true;
     int idx = 0;
+
+    char sendBuff[BUFFER_SIZE] = {};
+    char recvBuff[BUFFER_SIZE] = {};
 };
+
+int32_t kcp_output(const char* buf, int len, ikcpcb* kcp, void* user);

@@ -9,10 +9,10 @@
 constexpr auto default_ip = "127.0.0.1";
 constexpr auto default_port = 9527;
 constexpr auto default_max_len = 2000;
-constexpr auto default_test_times = 1;
+constexpr auto default_test_times = 2;
 constexpr auto default_lost_rate = 0;
 constexpr auto default_send_interval = 30; // ms
-constexpr auto default_client_cnt = 10;
+constexpr auto default_client_cnt = 2;
 
 bool g_running = true;
 

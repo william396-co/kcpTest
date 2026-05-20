@@ -20,9 +20,12 @@ public:
 
     void update();
 
-    void recv(const char * data, size_t len );
-    void send(const char* data, size_t len);
+    void recv_data(const char * data, size_t len );
+    void send_data(const char* data, size_t len);
+
     void send_shakehand_reply();
+public:
+    int send(const char* data, int len);
 
     void set_show( bool _b ) { show_data = _b; }
     void setlostrate( int lostrate );
@@ -34,4 +37,10 @@ private:
     uint16_t remotePort{};
     int md;
     bool show_data = false;
+    uint32_t sn{};
+
+    char recvBuff[BUFFER_SIZE] = {};
+    char sendBuff[BUFFER_SIZE] = {};
 };
+
+int32_t kcp_output(const char* buf, int len, ikcpcb* kcp, void* user);

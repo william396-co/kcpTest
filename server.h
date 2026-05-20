@@ -41,7 +41,7 @@ public:
 
     void recv_work();
     void send_work();
-    void recv_data(const char* buf, size_t len); // low leve recv
+    void parse_udp_data(const char* buf, size_t len); // parse data from plain udp
 
     void setmode( int mode );
     void show_data( bool _show ) { show = _show; }
@@ -49,6 +49,7 @@ public:
     void setlostrate( int lostrate ) { lost_rate = lostrate / 2; }
 
     uint32_t alloc_conv()const;
+    
 private:
     std::unique_ptr<UdpSocket> listen;
     ConnMap connections;

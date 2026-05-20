@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util.h"
+#include "packet.h"
 constexpr auto RECV_BUF_SIZE = 1024 * 4;
 
 class UdpSocket
