@@ -31,13 +31,15 @@ Client::~Client()
 }
 
 void Client::setmode( int mode )
-{   
-    
+{       
     md = mode;
 }
 
 void Client::send( const char * data, size_t len )
 {
+    if (!handshake_done)return;
+    last_send_ms = util::now_ms();
+
     // use kcp send data to endpoint
 	MsgHeader* msgHeader = (MsgHeader*)sendBuff;
 	msgHeader->sn = htonl(++sn);
@@ -58,6 +60,9 @@ void Client::send( const char * data, size_t len )
 
 void Client::recv( const char * data, size_t len )
 {
+    if (!handshake_done)return;
+    last_recv_ms = util::now_ms();
+
     ikcp_input(kcp, data, len);
 
     std::memset(recvBuff, 0, sizeof(recvBuff));
@@ -123,6 +128,7 @@ void Client::send_shakehand()
 {
     // use socket direct send
     socket->send(nullptr,0,0,PKT_HANDSHAKE_REQ);
+    last_send_ms = util::now_ms();
     std::cout << __PRETTY_FUNCTION__ << "\n";
 }
 
@@ -131,8 +137,24 @@ void Client::recv_shakehand(uint32_t conv)
     kcp = ikcp_create(conv, socket.get());
     ikcp_setoutput(kcp, kcp_output);
     util::ikcp_set_mode(kcp, md);
+    handshake_done = true;
+    last_recv_ms = util::now_ms();
+    sendPing();
    // util::ikcp_set_log(kcp, IKCP_LOG_INPUT | IKCP_LOG_OUTPUT);
 	std::cout << __PRETTY_FUNCTION__ << "conv:" << conv << "\n";
+}
+
+void Client::keepAlive()
+{
+    if (util::now_ms() - last_send_ms >= PINGT_INTERVAL) {
+        sendPing();
+    }
+}
+
+void Client::sendPing()
+{
+	constexpr auto PING_MSG = "PING";
+	send(PING_MSG, sizeof(PING_MSG));
 }
 
 void Client::rand_send_work()
@@ -147,6 +169,7 @@ void Client::rand_send_work()
         }
 
         util::isleep( 1 );
+        keepAlive();
         ikcp_update( kcp, util::iclock() );
 
         // auto input test
@@ -168,7 +191,6 @@ void Client::rand_send_work()
 }
 void Client::send_work()
 {
-    std::string writeBuffer;
     while (is_running) {
 
         if (!kcp) {
@@ -178,8 +200,15 @@ void Client::send_work()
         }
 
         util::isleep(1);
+        keepAlive();
         ikcp_update(kcp, util::iclock());
+    }
+}
 
+void Client::input_work()
+{
+    std::string writeBuffer;
+    while (is_running) {
         printf("Please enter a string to send to server(%s:%d):\n", socket->getRemoteIp(), socket->getRemotePort());
 
         writeBuffer.clear();
@@ -192,12 +221,13 @@ void Client::send_work()
 
 void Client::recv_work()
 {
-    char buff[BUFFER_SIZE];
     while ( is_running ) {
 
         if (kcp) {
             ikcp_update(kcp, util::iclock());
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
 
         // recv pack
         if ( socket->recv() < 0 ) {

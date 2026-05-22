@@ -91,7 +91,8 @@ int main( int argc, char ** argv )
     client->set_show_info(true);
 
     joining_thread work( &Client::recv_work, client.get() );
-    joining_thread input( &Client::send_work, client.get() );
+    joining_thread send( &Client::send_work, client.get() );
+    joining_thread input(&Client::input_work, client.get());
 
     while ( g_running ) {
         std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );

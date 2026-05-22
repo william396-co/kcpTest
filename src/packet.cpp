@@ -16,7 +16,7 @@ std::string encode_packet(PacketType type, uint32_t conv, const char* payload, u
     return out;
 }
 
- bool decode_packet(const char* data, size_t len, DecodedPacket& out)
+bool decode_packet(const char* data, size_t len, DecodedPacket& out)
 {
     if (len < HEADER_SIZE) {
         return false;

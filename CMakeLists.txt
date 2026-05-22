@@ -13,6 +13,7 @@ add_library(kcp_core STATIC
     src/random_util.cpp
     src/udpsocket.cpp
     src/util.cpp
+    src/packet.cpp
 )
 
 target_include_directories(kcp_core

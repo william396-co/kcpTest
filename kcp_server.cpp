@@ -6,7 +6,7 @@
 constexpr auto default_port = 9527;
 constexpr auto default_lost_rate = 0;
 
-bool is_running = true;
+bool is_running = false;
 
 void signal_handler( int sig )
 {
@@ -54,11 +54,8 @@ int main( int argc, char ** argv )
     std::unique_ptr<Server> server = std::make_unique<Server>( port );
     server->setmode( mode );
     server->setlostrate( lost_rate );
-
-     server->show_data( true );
-
-    joining_thread accept( &Server::recv_work, server.get() );
-    joining_thread work( &Server::send_work, server.get() );
+    server->show_data( true );
+    server->startService();
 
 
     while (is_running) {

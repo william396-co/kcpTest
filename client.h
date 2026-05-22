@@ -15,6 +15,7 @@ public:
 
     void recv_work();
     void send_work();
+    void input_work();// for client test
 
     void rand_send_work();// for multiple client
 
@@ -56,6 +57,8 @@ public:
     void send_shakehand();     // first send shakehand
     void recv_shakehand(uint32_t conv);// recieve shakehand from server
 
+    void keepAlive();
+    void sendPing();
 private:
     std::unique_ptr<UdpSocket> socket;
     ikcpcb* kcp{};
@@ -73,6 +76,9 @@ private:
     bool show_info = false;
     bool is_running = true;
     int idx = 0;
+    bool handshake_done{};
+    time_t last_recv_ms{};
+    time_t last_send_ms{};
 
     char sendBuff[BUFFER_SIZE] = {};
     char recvBuff[BUFFER_SIZE] = {};

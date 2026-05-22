@@ -75,3 +75,7 @@ struct MsgHeader {
 #pragma pack(pop)
 
 constexpr auto MsgHeaderSize = sizeof(MsgHeader);
+
+
+constexpr auto PINGT_INTERVAL = 30000;// PING interval millisecond
+constexpr auto HANSHAKE_TIME = 5000;

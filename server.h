@@ -2,10 +2,13 @@
 #include "src/util.h"
 #include "src/udpsocket.h"
 #include "src/ikcp.h"
+#include "src/joining_thread.h"
 
 #include <unordered_map>
 #include <functional>
 #include <string>
+#include <memory>
+#include <vector>
 #include <memory>
 
 class Connection;
@@ -25,22 +28,31 @@ struct hash<ConnID>
 };
 } // namespace std
 
-using ConnMap = std::unordered_map<uint32_t, Connection *>;
+using ConnectionPtr = Connection*;
+using ConnMap = std::unordered_map<uint32_t, ConnectionPtr>;
+using ConnMapVec = std::vector<ConnMap>;
+
+using ConnIDConvMap = std::unordered_map<ConnID, uint32_t>;// ConnID,conv
 
 extern bool is_running;
 
 class Server
 {
 public:
-    Server(uint16_t port);
+	Server(uint16_t port, uint32_t work_thread_cnt = 4);
     ~Server();
 
-    Connection * createConn(UdpSocket* socket, const char * ip, uint16_t port, uint32_t conv );
+    bool startService();
+    bool stopService();
 
-    Connection* findConn(uint32_t conv)const;
+    ConnectionPtr createConn(UdpSocket* socket, const char * ip, uint16_t port, uint32_t conv );
+
+    ConnectionPtr findConn(uint32_t conv)const;
+
+    ConnectionPtr findConn(const char* ip, uint16_t port)const;
 
     void recv_work();
-    void send_work();
+    void send_work(int idx);
     void parse_udp_data(const char* buf, size_t len); // parse data from plain udp
 
     void setmode( int mode );
@@ -52,11 +64,17 @@ public:
     
 private:
     std::unique_ptr<UdpSocket> listen;
-    ConnMap connections;
+    std::vector<joining_thread> work_threads;
+    joining_thread recv_thread;
+    joining_thread send_thread;
+    ConnMapVec conMapVec;
+    ConnIDConvMap connIDConvMap;
     int md;
     uint16_t listen_port;
     bool show = false;
     int lost_rate = 0;
+    const uint32_t work_thread_cnt{};
 	mutable uint32_t nextConv{ 1000 };
+    time_t last_reclaim_ms{};
 };
 
