@@ -18,13 +18,23 @@ void signal_handler( int sig )
 }
 void handle_signal()
 {
+#ifdef SIGPIPE
     signal( SIGPIPE, SIG_IGN );
+#endif
     signal( SIGINT, signal_handler );
     signal( SIGTERM, signal_handler );
 }
 
 int main( int argc, char ** argv )
 {
+#ifdef _WIN32
+    WSADATA wsaData{};
+    int rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (rc != 0) {
+        printf("WSAStartup failed: %d\n", rc);
+        return 1;
+    }
+#endif
     handle_signal();
 
     int mode = 0;
@@ -73,20 +83,24 @@ int main( int argc, char ** argv )
         lost_rate,
         send_interval );
 
-    std::unique_ptr<Client> client = std::make_unique<Client>( ip.c_str(), port, conv );
+	std::unique_ptr<Client> client = std::make_unique<Client>(ip.c_str(), port);
     client->setmode( mode );
     client->setauto( true, test_times, max_len );
     client->setlostrate( lost_rate );
     client->setsendinterval( send_interval );
+    client->set_show_info(true);
 
-    joining_thread work( &Client::run, client.get() );
-    joining_thread input( &Client::input, client.get() );
+    joining_thread work( &Client::recv_work, client.get() );
+    joining_thread send( &Client::send_work, client.get() );
+    joining_thread input(&Client::input_work, client.get());
 
     while ( g_running ) {
         std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
     }
 
     client->terminate();
-
+#ifdef _WIN32
+    WSACleanup();
+#endif
     return 0;
 }

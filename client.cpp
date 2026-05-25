@@ -9,76 +9,77 @@
 
 void rand_str( std::string & str, size_t max = 2000 )
 {
-    size_t sz = random( 8, max );
+    auto sz = random( 8, (int)max );
     str = random_string( sz );
 }
 
-Client::Client( const char * ip, uint16_t port, uint32_t conv )
+Client::Client(const char* ip, uint16_t port)
     : socket { nullptr }, md { 0 }
 {
     socket = std::make_unique<UdpSocket>();
     socket->setNonblocking();
-    if ( !socket->connect( ip, port ) ) {
+    if (!socket->connect(ip, port)) {
         throw std::runtime_error( "socket connect failed" );
     }
-
-    kcp = ikcp_create( conv, socket.get() );
-    ikcp_setoutput( kcp, util::kcp_output );
 }
 
 Client::~Client()
 {
-    ikcp_release( kcp );
+    if (kcp) {
+        ikcp_release(kcp);
+    }
 }
 
 void Client::setmode( int mode )
-{
-    util::ikcp_set_mode( kcp, mode );
+{       
     md = mode;
 }
 
 void Client::send( const char * data, size_t len )
 {
-    char buff[BUFFER_SIZE] = {};
-    ( (uint32_t *)buff )[0] = sn++;
-    ( (uint32_t *)buff )[1] = util::iclock();
-    ( (uint32_t *)buff )[2] = (uint32_t)len;
+    if (!handshake_done)return;
+    last_send_ms = util::now_ms();
+
+    // use kcp send data to endpoint
+	MsgHeader* msgHeader = (MsgHeader*)sendBuff;
+	msgHeader->sn = htonl(++sn);
+    msgHeader->ts = htonll(util::now_ms());    
+	msgHeader->sz = htonl(len);
+
+    auto totalSize = len + MsgHeaderSize;
 
     if ( show_info ) {
-        printf( "Send idx:%u sn:%u size:%lu content {%s}\n", idx, sn - 1, size_t( len + 12 ), data );
+        printf( "Send idx:%u sn:%u size:%llu content {%s}\n", idx, sn, totalSize, data );
     } else {
-        printf( "Send idx:%u sn:%u size:%lu\n", idx, sn - 1, size_t( len + 12 ) );
+        printf( "Send idx:%u sn:%u size:%llu\n", idx, sn, totalSize );
     }
-    memcpy( &buff[12], data, len );
-    ikcp_send( kcp, buff, len + 12 );
+	memcpy(sendBuff + MsgHeaderSize, data, len);
+    ikcp_send( kcp, sendBuff, totalSize);
     ikcp_update( kcp, util::iclock() );
-}
-
-void Client::input()
-{
-    std::string writeBuffer;
-    while ( is_running ) {
-        printf( "Please enter a string to send to server(%s:%d):\n", socket->getRemoteIp(), socket->getRemotePort() );
-
-        writeBuffer.clear();
-        std::getline( std::cin, writeBuffer );
-        if ( !writeBuffer.empty() ) {
-            send( writeBuffer.data(), writeBuffer.size() );
-        }
-    }
 }
 
 void Client::recv( const char * data, size_t len )
 {
-    char * ptr_ = (char *)data;
-    while ( size_t( ptr_ - data ) < len ) {
-        uint32_t sn_ = *(uint32_t *)( ptr_ );
-        uint32_t ts_ = *(uint32_t *)( ptr_ + 4 );
-        uint32_t sz_ = *(uint32_t *)( ptr_ + 8 ) + 12;
+    if (!handshake_done)return;
+    last_recv_ms = util::now_ms();
 
-        uint32_t rtt_ = util::iclock() - ts_;
-        if ( sn_ != (uint32_t)next ) {
-            printf( "ERROR sn %u<-> next=%d\n", sn, next );
+    ikcp_input(kcp, data, len);
+
+    std::memset(recvBuff, 0, sizeof(recvBuff));
+    int rc = ikcp_recv(kcp, recvBuff, sizeof(recvBuff));
+    if (rc < 0) return;
+
+    char* ptr_ = (char*)recvBuff;
+    while (size_t(ptr_ - recvBuff) < len) {
+
+        MsgHeader* msgHeader = (MsgHeader*)ptr_;
+        msgHeader->sn = ntohl(msgHeader->sn);
+        msgHeader->ts = ntohll(msgHeader->ts);
+        msgHeader->sz = ntohl(msgHeader->sz);
+
+        uint32_t rtt_ = util::iclock() - msgHeader->ts;
+        if (msgHeader->sn != (uint32_t)next) {
+            printf("ERROR sn %u<-> next=%d\n", sn, next);
             is_running = false;
         }
         ++next;
@@ -86,25 +87,89 @@ void Client::recv( const char * data, size_t len )
         ++count;
         maxrtt = rtt_ > maxrtt ? rtt_ : maxrtt;
 
-        if ( show_info )
-            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u  content: {%s}\n", idx, md, sn_, rtt_, sz_, (char *)&ptr_[12] );
-        else
-            printf( "[RECV] idx:%u mode=%d sn:%d rrt:%d size:%u \n", idx, md, sn_, rtt_, sz_ );
 
-        if ( next >= test_count ) {
-            printf( "Finished %d times test\n", test_count );
+        if (show_info)
+            printf("RECV mode=%d [%s:%d], sn:[%d] sz:[%u] string is:{ %s}\n", md, socket->getRemoteIp(), socket->getRemotePort(), msgHeader->sn, msgHeader->sz, (char*)(recvBuff + MsgHeaderSize));
+
+        else
+            printf("RECV mode=%d [%s:%d], sn:[%d] sz:[%u]\n", md, socket->getRemoteIp(), socket->getRemotePort(), msgHeader->sn, msgHeader->sz);
+
+        if (next >= test_count) {
+            printf("Finished %d times test\n", test_count);
             is_running = false;
         }
-        ptr_ += sz_;
+        ptr_ += msgHeader->sz;
     }
 }
 
-void Client::run()
+void Client::parse_udp_data(const char* buf, size_t len)
 {
+    DecodedPacket pkt;
+    if (!decode_packet(buf, len, pkt)) {
+        return;
+    }
+
+    switch (pkt.type) {
+    case PacketType::PKT_HANDSHAKE_ACK:
+        // client: create kcp with pkt.conv
+        recv_shakehand(pkt.conv);
+        break;
+    case PacketType::PKT_KCP_DATA:
+        // pass pkt.payload / pkt.size to ikcp_input()
+        recv(pkt.payload, pkt.size);
+        break;
+    case PacketType::PKT_HANDSHAKE_REQ:
+        std::cerr << "invalid PacketType: " << pkt.type << "\n";
+        break;
+    }
+}
+
+void Client::send_shakehand()
+{
+    // use socket direct send
+    socket->send(nullptr,0,0,PKT_HANDSHAKE_REQ);
+    last_send_ms = util::now_ms();
+    std::cout << __PRETTY_FUNCTION__ << "\n";
+}
+
+void Client::recv_shakehand(uint32_t conv)
+{
+    kcp = ikcp_create(conv, socket.get());
+    ikcp_setoutput(kcp, kcp_output);
+    util::ikcp_set_mode(kcp, md);
+    handshake_done = true;
+    last_recv_ms = util::now_ms();
+    sendPing();
+   // util::ikcp_set_log(kcp, IKCP_LOG_INPUT | IKCP_LOG_OUTPUT);
+	std::cout << __PRETTY_FUNCTION__ << "conv:" << conv << "\n";
+}
+
+void Client::keepAlive()
+{
+    if (util::now_ms() - last_send_ms >= PINGT_INTERVAL) {
+        sendPing();
+    }
+}
+
+void Client::sendPing()
+{
+	constexpr auto PING_MSG = "PING";
+	send(PING_MSG, sizeof(PING_MSG));
+}
+
+void Client::rand_send_work()
+{   
     auto current_ = util::now_ms();
-    char buff[BUFFER_SIZE];
-    while ( is_running ) {
-        //  util::isleep( 1 );
+    while (is_running) 
+    {        
+        if (!kcp) {
+            send_shakehand();
+            std::this_thread::sleep_for(std::chrono::milliseconds{ 200 });
+            continue;
+        }
+
+        util::isleep( 1 );
+        keepAlive();
         ikcp_update( kcp, util::iclock() );
 
         // auto input test
@@ -122,16 +187,53 @@ void Client::run()
                 send( writeBuffer.data(), writeBuffer.size() );
             }
         }
+    };
+}
+void Client::send_work()
+{
+    while (is_running) {
+
+        if (!kcp) {
+            send_shakehand();
+            std::this_thread::sleep_for(std::chrono::milliseconds{ 200 });
+            continue;
+        }
+
+        util::isleep(1);
+        keepAlive();
+        ikcp_update(kcp, util::iclock());
+    }
+}
+
+void Client::input_work()
+{
+    std::string writeBuffer;
+    while (is_running) {
+        printf("Please enter a string to send to server(%s:%d):\n", socket->getRemoteIp(), socket->getRemotePort());
+
+        writeBuffer.clear();
+        std::getline(std::cin, writeBuffer);
+        if (!writeBuffer.empty()) {
+            send(writeBuffer.data(), writeBuffer.size());
+        }
+    }
+}
+
+void Client::recv_work()
+{
+    while ( is_running ) {
+
+        if (kcp) {
+            ikcp_update(kcp, util::iclock());
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
 
         // recv pack
         if ( socket->recv() < 0 ) {
             continue;
         }
-        ikcp_input( kcp, socket->getRecvBuffer(), socket->getRecvSize() );
-        bzero( buff, sizeof( buff ) );
-        int rc = ikcp_recv( kcp, buff, sizeof( buff ) );
-        if ( rc < 0 ) continue;
-        recv( buff, rc );
+        parse_udp_data(socket->getRecvBuffer(), socket->getRecvSize());
     }
 
     /* summary */
@@ -144,4 +246,12 @@ void Client::run()
             int( sumrtt / count ),
             maxrtt,
             count );
+}
+
+int32_t kcp_output(const char* buf, int len, ikcpcb* kcp, void* user)
+{
+    UdpSocket* s = (UdpSocket*)user;
+    if (s)
+        return s->send(buf, len, kcp->conv, PKT_KCP_DATA);
+    return -1;
 }

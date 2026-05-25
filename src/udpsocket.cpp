@@ -1,4 +1,5 @@
 #include "udpsocket.h"
+#include "udpsocket.h"
 #include <cstring> // memset
 #include "random_util.h"
 
@@ -56,21 +57,24 @@ void UdpSocket::close()
     m_fd = 0;
 }
 
-int32_t UdpSocket::send( const char * bytes, uint32_t size )
+int32_t UdpSocket::send(const char* bytes, uint32_t size, uint32_t conv, PacketType type)
 {
     if ( random( 0, 100 ) < lost_rate ) return 0; // lost rate condition test
-    return sendto( m_fd, bytes, size, 0, (struct sockaddr *)&m_remote_addr, sizeof( m_remote_addr ) );
+
+    auto pkt = encode_packet(type, conv, bytes,size);
+    return sendto(m_fd, pkt.data(), pkt.size(), 0, (struct sockaddr*)&m_remote_addr, sizeof(m_remote_addr));
 }
 
-int32_t UdpSocket::send( const char * bytes, uint32_t size, const char * ip, uint16_t port )
+int32_t UdpSocket::send(const char* bytes, uint32_t size, const char* ip, uint16_t port , uint32_t conv, PacketType type)
 {
     if ( random( 0, 100 ) < lost_rate ) return 0; // lost rate condition test
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr( ip );
-    addr.sin_port = htons( port );
-    return sendto( m_fd, bytes, size, 0, (struct sockaddr *)&addr, sizeof( addr ) );
+    addr.sin_addr.s_addr = inet_addr(ip);
+    addr.sin_port = htons(port);
+    auto pkt = encode_packet(type, conv, bytes, size);
+	return sendto(m_fd, pkt.data(), pkt.size(), 0, (struct sockaddr*)&addr, sizeof(addr));
 }
 
 int32_t UdpSocket::recv()
@@ -80,6 +84,15 @@ int32_t UdpSocket::recv()
     socklen_t addr_len = sizeof( m_remote_addr );
     m_recvSize = ::recvfrom( m_fd, m_recvBuffer, sizeof( m_recvBuffer ), 0, (struct sockaddr *)&m_remote_addr, &addr_len );
     return m_recvSize;
+}
+
+int32_t UdpSocket::recv(uint32_t& conv)
+{
+    m_recvSize = 0;
+    memset(m_recvBuffer, 0, sizeof(m_recvBuffer));
+    socklen_t addr_len = sizeof(m_remote_addr);
+    m_recvSize = ::recvfrom(m_fd, (char*)&conv, sizeof(conv), 0, (struct sockaddr*)&m_remote_addr, &addr_len);
+    return m_recvSize;    
 }
 
 void UdpSocket::setSocketopt()

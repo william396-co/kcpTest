@@ -27,7 +27,6 @@
 #include <string>
 
 constexpr auto BUFFER_SIZE = 1024 * 8;
-constexpr auto conv = 0x12345;
 
 namespace util {
 using namespace std::chrono;
@@ -98,7 +97,5 @@ const char * get_mode_name( int mode );
 void ikcp_set_mode( ikcpcb * kcp, int mode );
 
 void ikcp_set_log( ikcpcb * kcp, int mask );
-
-int32_t kcp_output( const char * buf, int len, ikcpcb * kcp, void * user );
 
 } // namespace util

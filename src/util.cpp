@@ -1,5 +1,6 @@
 #include "util.h"
 #include "udpsocket.h"
+#include "connection.h"
 
 namespace util {
 
@@ -46,14 +47,6 @@ void ikcp_set_log( ikcpcb * kcp, int mask )
 {
     kcp->logmask |= mask;
     kcp->writelog = kcp_log;
-}
-
-int32_t kcp_output( const char * buf, int len, ikcpcb * kcp, void * user )
-{
-    UdpSocket * s = (UdpSocket *)user;
-    if ( s )
-        return s->send( buf, len );
-    return -1;
 }
 
 } // namespace util

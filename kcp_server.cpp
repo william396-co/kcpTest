@@ -6,7 +6,7 @@
 constexpr auto default_port = 9527;
 constexpr auto default_lost_rate = 0;
 
-bool is_running = true;
+bool is_running = false;
 
 void signal_handler( int sig )
 {
@@ -14,13 +14,23 @@ void signal_handler( int sig )
 }
 void handle_signal()
 {
+#ifdef SIGPIPE
     signal( SIGPIPE, SIG_IGN );
+#endif
     signal( SIGINT, signal_handler );
     signal( SIGTERM, signal_handler );
 }
 
 int main( int argc, char ** argv )
 {
+#ifdef _WIN32
+    WSADATA wsaData{};
+    int rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (rc != 0) {
+        printf("WSAStartup failed: %d\n", rc);
+        return 1;
+    }
+#endif
 
     handle_signal();
 
@@ -41,15 +51,19 @@ int main( int argc, char ** argv )
     }
 
     printf( "Usage:<%s>  <port>:%d  <mode>:%s <lost_rate>:%d\n", argv[0], port, util::get_mode_name( mode ), lost_rate );
-    std::unique_ptr<Server> server = std::make_unique<Server>( port, conv );
+    std::unique_ptr<Server> server = std::make_unique<Server>( port );
     server->setmode( mode );
     server->setlostrate( lost_rate );
+    server->show_data( true );
+    server->startService();
 
-    // server->show_data( true );
-    //     util::ikcp_set_log(IKCP_LOG_INPUT|IKCP_LOG_OUTPUT);
 
-    joining_thread accept( &Server::accept, server.get() );
-    joining_thread work( &Server::run, server.get() );
+    while (is_running) {
 
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+    }
+#ifdef _WIN32
+    WSACleanup();
+#endif
     return 0;
 }
