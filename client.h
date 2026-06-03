@@ -1,6 +1,10 @@
 #pragma once
+#include <atomic>
 #include <memory>
+#include <functional>
 #include <iostream>
+#include <mutex>
+#include <queue>
 #include <string>
 
 #include "src/util.h"
@@ -10,6 +14,9 @@
 class Client
 {
 public:
+    using MessageHandler = std::function<void(const char*, size_t)>;
+    using ConnectedHandler = std::function<void(uint32_t)>;
+
     Client(const char * ip, uint16_t port );
     ~Client();
 
@@ -43,14 +50,30 @@ public:
     {
         is_running = false;
     }
+    bool running() const
+    {
+        return is_running.load();
+    }
     void set_index( int idx_ )
     {
         idx = idx_;
     }
+    void set_message_handler(MessageHandler handler)
+    {
+        std::lock_guard lock(handler_mtx);
+        message_handler = std::move(handler);
+    }
+    void set_connected_handler(ConnectedHandler handler)
+    {
+        std::lock_guard lock(handler_mtx);
+        connected_handler = std::move(handler);
+    }
+    void send_async(const char* data, size_t len);
 
 private:
-    void send( const char * data, size_t len );
-    void recv( const char * data, size_t len );
+    void send_test_payload( const char * data, size_t len );
+    void handle_kcp_payload( const char * data, size_t len );
+    void enqueue_payload(const char* data, size_t len);
 public:
     void parse_udp_data(const char* buf, size_t len);// parse data from plain udp
         
@@ -62,26 +85,29 @@ public:
 private:
     std::unique_ptr<UdpSocket> socket;
     ikcpcb* kcp{};
+    std::mutex kcp_mtx;
+    std::mutex send_q_mtx;
+    std::queue<std::string> send_queue;
+    std::mutex handler_mtx;
+    MessageHandler message_handler;
+    ConnectedHandler connected_handler;
     int md;
     int str_max_len;
     bool auto_test = false;
     uint32_t test_count = 10;
     int lost_rate = 0;
     int send_interval = 20;
-    uint32_t sn = 0;
-    uint32_t next = 0;
+    std::atomic<uint32_t> sn{ 0 };
+    uint32_t next = 1;
     uint32_t sumrtt = 0;
     uint32_t count = 0;
     uint32_t maxrtt = 0;
     bool show_info = false;
-    bool is_running = true;
+    std::atomic_bool is_running{ true };
     int idx = 0;
-    bool handshake_done{};
-    time_t last_recv_ms{};
-    time_t last_send_ms{};
-
-    char sendBuff[BUFFER_SIZE] = {};
-    char recvBuff[BUFFER_SIZE] = {};
+    std::atomic_bool handshake_done{ false };
+    std::atomic<time_t> last_recv_ms{ 0 };
+    std::atomic<time_t> last_send_ms{ 0 };
 };
 
 int32_t kcp_output(const char* buf, int len, ikcpcb* kcp, void* user);

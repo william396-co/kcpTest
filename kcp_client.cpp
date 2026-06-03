@@ -28,6 +28,7 @@ void handle_signal()
 int main( int argc, char ** argv )
 {
 #ifdef _WIN32
+    // Windows needs explicit Winsock initialization before any socket code runs.
     WSADATA wsaData{};
     int rc = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (rc != 0) {
@@ -37,6 +38,7 @@ int main( int argc, char ** argv )
 #endif
     handle_signal();
 
+    // Default single-client test settings; each CLI argument overrides one field.
     int mode = 0;
     std::string ip = default_ip;
     uint16_t port = default_port;
@@ -83,18 +85,25 @@ int main( int argc, char ** argv )
         lost_rate,
         send_interval );
 
-	std::unique_ptr<Client> client = std::make_unique<Client>(ip.c_str(), port);
+    // One client instance exercises one handshake and one KCP session.
+    std::unique_ptr<Client> client = std::make_unique<Client>(ip.c_str(), port);
     client->setmode( mode );
     client->setauto( true, test_times, max_len );
     client->setlostrate( lost_rate );
     client->setsendinterval( send_interval );
     client->set_show_info(true);
+    client->set_connected_handler(
+        [](uint32_t conv) {
+            std::cout << "[Client connected] conv=" << conv << "\n";
+        });
 
+    // Separate threads keep receive, send, and stdin handling independent.
     joining_thread work( &Client::recv_work, client.get() );
     joining_thread send( &Client::send_work, client.get() );
     joining_thread input(&Client::input_work, client.get());
 
-    while ( g_running ) {
+    // Exit when the process is signaled or the client finishes its test run.
+    while ( g_running && client->running() ) {
         std::this_thread::sleep_for( std::chrono::milliseconds { 1 } );
     }
 

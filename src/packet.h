@@ -21,6 +21,7 @@
 #include <WS2tcpip.h>
 #endif
 
+// Fixed protocol marker used to distinguish project packets from arbitrary UDP traffic.
 constexpr uint32_t MAGIC_VAL = 0x34b569df;
 
 enum PacketType : uint8_t {
@@ -58,6 +59,7 @@ std::string encode_packet(PacketType type, uint32_t conv, const char* payload, u
 struct DecodedPacket {
     PacketType type{};
     uint32_t conv{};
+    // payload points into the original UDP receive buffer; it is not an owned copy.
     const char* payload{};
     uint32_t size{};
 };
@@ -67,14 +69,27 @@ bool decode_packet(const char* data, size_t len, DecodedPacket& out);
 
 #pragma pack(push, 1)
 struct MsgHeader {
-    uint32_t sn; // sn
-    time_t ts;   // timestamp
-    uint32_t sz; // datasize;
-   // char* data;
+    // Per-message metadata used by the sample app for ordering and RTT measurement.
+    uint32_t sn;
+    time_t ts;
+    uint32_t sz;
 };
 #pragma pack(pop)
 
 constexpr auto MsgHeaderSize = sizeof(MsgHeader);
+
+// Helpers for the sample app payload format carried inside KCP:
+// MsgHeader + application body.
+std::string encode_app_message(uint32_t sn, time_t ts, const char* payload, uint32_t size);
+
+struct DecodedAppMessage {
+    uint32_t sn{};
+    time_t ts{};
+    const char* payload{};
+    uint32_t size{};
+};
+
+bool decode_app_message(const char* data, size_t len, DecodedAppMessage& out);
 
 
 constexpr auto PINGT_INTERVAL = 30000;// PING interval millisecond

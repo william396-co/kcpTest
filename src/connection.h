@@ -1,8 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <queue>
+#include <functional>
 #include <mutex>
+#include <queue>
 
 #include "util.h"
 #include "udpsocket.h"
@@ -11,7 +12,10 @@
 class Connection
 {
 public:
-    Connection( UdpSocket* socket, const char * remote_ip, uint16_t remote_port, uint32_t conv );
+    // Internal hook used by the server to dispatch a reassembled payload.
+    using PayloadDispatchHandler = std::function<void(Connection&, const char*, size_t)>;
+
+    Connection( UdpSocket* socket, UdpEndpoint remote_endpoint, uint32_t conv );
     ~Connection();
 
     void setmode( int mode )
@@ -20,16 +24,26 @@ public:
         md = mode;
     }
 
+    void set_payload_dispatch_handler(PayloadDispatchHandler handler)
+    {
+        payload_dispatch_handler = std::move(handler);
+    }
+
     void update();
+    // Queue data so the worker thread can feed it into KCP without blocking the UDP receive thread.
     void push_snd_queu(const char* data, size_t len);
+    void push_snd_queu(std::string data);
+    // Queue inbound KCP bytes for later processing on the shard worker thread.
     void push_rcv_queue(const char* data, size_t len);
 
     void recv_data(const char * data, size_t len );
     void send_data(const char* data, size_t len);
 
+    // Reply to the handshake request with the assigned conv.
     void send_shakehand_reply();
 
 	uint32_t getConv()const { return kcp ? kcp->conv : 0; }
+    const UdpEndpoint& getEndpoint() const { return remoteEndpoint; }
 public:
     int send(const char* data, int len);
 
@@ -47,14 +61,10 @@ private:
     std::queue<std::string> recv_queue;
     UdpSocket* socket{};
     ikcpcb* kcp{};
-    std::string remoteIp{};
-    uint16_t remotePort{};
+    UdpEndpoint remoteEndpoint{};
+    PayloadDispatchHandler payload_dispatch_handler;
     int md;
     bool show_data = false;
-    uint32_t sn{};
-
-    char recvBuff[BUFFER_SIZE] = {};
-    char sendBuff[BUFFER_SIZE] = {}; 
 
     // connection state 
     time_t last_recv_ms{};

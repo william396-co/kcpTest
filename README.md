@@ -237,6 +237,26 @@ They should be distinguished by:
 
 That keeps the protocol explicit, debuggable, and extendable.
 
+## Reusable Runtime Hooks
+
+The transport layer is now structured so demo logic is optional instead of baked into the session core.
+
+### Server
+
+- `Server::set_application_message_handler(...)` lets you plug in application logic for each decoded KCP payload.
+- If no handler is installed, the server leaves payload handling to the caller.
+- Connections are sharded across worker threads by `conv`, so session update work is partitioned instead of running through one shared connection map.
+
+### Client
+
+- `Client::set_connected_handler(...)` lets higher-level code react when the handshake completes.
+- `Client::set_message_handler(...)` lets higher-level code consume raw KCP payloads.
+- `Client::send_async(...)` queues raw payloads for the client worker thread instead of coupling application code to direct KCP calls.
+
+### Transport
+
+- `UdpSocket` now supports explicit `UdpEndpoint` send/receive APIs so server-side traffic does not depend on one mutable "current remote" address shared across threads.
+
 ## Files
 
 Main files involved in the protocol:
